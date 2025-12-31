@@ -2,6 +2,7 @@ package ore.guard;
 
 import lombok.Getter;
 import ore.guard.command.cmds.HelpCMD;
+import ore.guard.impl.listeners.PlayerListener;
 import ore.guard.utils.localization.Localization;
 import ore.guard.utils.version.UpdateUtil;
 import org.bukkit.command.PluginCommand;
@@ -27,6 +28,8 @@ public final class OreGuard extends JavaPlugin {
 
         localization = new Localization();
         localization.setup();
+
+        getServer().getPluginManager().registerEvents(new PlayerListener(), this);
 
         registerCommands();
         UpdateUtil.getLatestVersion();
