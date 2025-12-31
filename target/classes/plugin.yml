@@ -2,3 +2,10 @@ name: OreGuard
 version: '1.0'
 main: ore.guard.OreGuard
 api-version: '1.16'
+commands:
+  oreguard:
+    description: "Основная команда OreGuard"
+    usage: "/<command> [help|reload|version]"
+    aliases: ["og", "guard"]
+    permission: oreguard.use
+    permission-message: "§cУ вас нет прав для выполнения этой команды!"

@@ -1,4 +1,10 @@
-ore\guard\utils\localization\Localization.class
-ore\guard\OreGuard.class
+ore\guard\command\cmds\HelpCMD$1.class
+ore\guard\command\cmds\HelpCMD$2.class
+ore\guard\command\SubCommand.class
 ore\guard\utils\version\UpdateUtil.class
+ore\guard\command\CommandRunner.class
 ore\guard\utils\version\Version.class
+ore\guard\utils\localization\Localization.class
+ore\guard\command\cmds\HelpCMD$3.class
+ore\guard\OreGuard.class
+ore\guard\command\cmds\HelpCMD.class

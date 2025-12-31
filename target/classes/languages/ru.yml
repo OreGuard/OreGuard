@@ -1,6 +1,22 @@
-#UpdateUtil (version)
-
+# UpdateUtil (version)
 version.failed: "Не удалось! - %s"
 version.error: "Ошибка! - %s"
 version.current: "Текущая версия: %s"
 version.latest: "Последняя версия: %s"
+
+# Commands
+commands.no_permission: "§cУ вас нет прав для выполнения этой команды!"
+commands.player_only: "§cЭту команду можно использовать только в игре!"
+commands.invalid_usage: "§cИспользование: %s"
+
+commands.help.header: "§6=== §eOreGuard Помощь §6==="
+commands.help.footer: "§6=========================="
+commands.help.format: "§e%s §7- §f%s"
+commands.help.specific: |
+  §6Команда: §e%s
+  §6Использование: §e%s
+  §6Описание: §7%s
+commands.help.not_found: "§cКоманда '%s' не найдена!"
+
+commands.reload.success: "§aПлагин успешно перезагружен!"
+commands.reload.error: "§cОшибка при перезагрузке: %s"
