@@ -1,0 +1,4 @@
+name: OreGuard
+version: '${project.version}'
+main: ore.guard.OreGuard
+api-version: '1.16'
