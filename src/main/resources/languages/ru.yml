@@ -1,0 +1,6 @@
+#UpdateUtil (version)
+
+version.failed: "Не удалось! - %s"
+version.error: "Ошибка! - %s"
+version.current: "Текущая версия: %s"
+version.latest: "Последняя версия: %s"

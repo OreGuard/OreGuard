@@ -1,0 +1,4 @@
+ore\guard\utils\localization\Localization.class
+ore\guard\OreGuard.class
+ore\guard\utils\version\UpdateUtil.class
+ore\guard\utils\version\Version.class
