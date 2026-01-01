@@ -70,7 +70,18 @@ public class OrePlayerManager implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        createPlayer(player);
+        OrePlayer orePlayer = createPlayer(player);
+        // Даем время на инициализацию игрока, затем обновляем данные
+        // Это нужно для корректной инициализации всех полей
+        org.bukkit.Bukkit.getScheduler().runTaskLater(
+                ore.guard.OreGuard.getInstance(),
+                () -> {
+                    if (orePlayer.isOnline()) {
+                        orePlayer.updateFromBukkit();
+                    }
+                },
+                1L // 1 тик задержки для правильной инициализации
+        );
     }
 
     @EventHandler

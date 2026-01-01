@@ -69,6 +69,13 @@ public class OrePlayer {
     @Setter private int totalBlocksProtected = 0;
     @Setter private int totalBlocksBroken = 0;
     @Setter private int violationsCount = 0;
+    
+    // История оповещений
+    private final java.util.List<AlertData> alertHistory = new java.util.ArrayList<>();
+    private static final int MAX_ALERT_HISTORY = 100;
+    
+    // Client brand (MC|Brand)
+    @Getter @Setter private String clientBrand = "Unknown";
 
     // Флаги состояния
     private boolean isInWater = false;
@@ -95,22 +102,68 @@ public class OrePlayer {
         this.yaw = location.getYaw();
         this.pitch = location.getPitch();
 
+        // Инициализация last значений (сначала равны текущим)
         this.lastX = x;
         this.lastY = y;
         this.lastZ = z;
         this.lastYaw = yaw;
         this.lastPitch = pitch;
 
+        // Инициализация состояний игрока
         this.isSneaking = player.isSneaking();
+        this.wasSneaking = isSneaking; // Инициализируем was поля
         this.isSprinting = player.isSprinting();
+        this.lastSprinting = isSprinting;
         this.isFlying = player.isFlying();
+        this.wasFlying = isFlying;
         this.isGliding = player.isGliding();
+        this.wasGliding = isGliding;
+        this.isSwimming = player.isSwimming();
+        this.wasSwimming = isSwimming;
+        this.isClimbing = false; // Будет обновлено в checkEnvironmentalConditions
+        this.wasClimbing = false;
         this.onGround = player.isOnGround();
+        this.lastOnGround = onGround;
+
+        // Инициализация velocity
+        this.velocity = player.getVelocity().clone();
+        this.lastVelocity = velocity.clone();
+
+        // Инициализация pose
+        try {
+            // В 1.16.5 есть getPose() метод
+            org.bukkit.entity.Pose bukkitPose = player.getPose();
+            switch (bukkitPose) {
+                case SNEAKING:
+                    this.pose = Pose.SNEAKING;
+                    break;
+                case SWIMMING:
+                    this.pose = Pose.SWIMMING;
+                    break;
+                case FALL_FLYING:
+                    this.pose = Pose.FALL_FLYING;
+                    break;
+                case SLEEPING:
+                    this.pose = Pose.SLEEPING;
+                    break;
+                default:
+                    this.pose = Pose.STANDING;
+            }
+        } catch (Exception e) {
+            // Если метод недоступен, используем дефолтное значение
+            this.pose = Pose.STANDING;
+        }
+        this.lastPose = pose;
 
         // ВАЖНО: Инициализируем setbackTeleportUtil в конструкторе!
         this.setbackTeleportUtil = new SetbackTeleportUtil(this);
 
+        // Обновляем дополнительные состояния
+        checkEnvironmentalConditions();
         updateBoundingBox();
+        
+        // Обновляем начальную позицию для отката
+        setbackTeleportUtil.updateLastKnownGoodPosition();
     }
 
     /**
@@ -157,6 +210,9 @@ public class OrePlayer {
 
         // Сохраняем историю движения
         saveMovementHistory();
+        
+        // Обновляем последнюю безопасную позицию для отката
+        setbackTeleportUtil.updateLastKnownGoodPosition();
     }
 
     /**
@@ -191,9 +247,7 @@ public class OrePlayer {
         } else {
             // Обычное обновление данных
             updateFromBukkit();
-
-            // Обновляем последнюю безопасную позицию
-            setbackTeleportUtil.updateLastKnownGoodPosition();
+            // updateFromBukkit() уже вызывает updateLastKnownGoodPosition()
         }
     }
 
@@ -205,6 +259,32 @@ public class OrePlayer {
             return setbackTeleportUtil.executeSetback();
         }
         return false;
+    }
+
+    /**
+     * Флаг нарушения с откатом на N тиков
+     * @param ticks Количество тиков для отката
+     */
+    public void flag(int ticks) {
+        if (isExempt) return;
+        setbackTeleportUtil.executeSetbackByTicks(ticks);
+    }
+    
+    /**
+     * Добавить оповещение в историю
+     */
+    public void addAlert(String checkName, String checkDescription, String info) {
+        alertHistory.add(new AlertData(checkName, checkDescription, info, System.currentTimeMillis()));
+        if (alertHistory.size() > MAX_ALERT_HISTORY) {
+            alertHistory.remove(0);
+        }
+    }
+    
+    /**
+     * Получить историю оповещений
+     */
+    public java.util.List<AlertData> getAlertHistory() {
+        return new java.util.ArrayList<>(alertHistory);
     }
 
     /**
@@ -537,5 +617,15 @@ public class OrePlayer {
             Vector playerPosition,
             boolean wasSneaking,
             boolean wasSprinting
+    ) {}
+    
+    /**
+     * Данные об оповещении
+     */
+    public record AlertData(
+            String checkName,
+            String checkDescription,
+            String info,
+            long timestamp
     ) {}
 }

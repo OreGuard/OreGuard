@@ -29,6 +29,10 @@ public class SetbackTeleportUtil {
     @Getter @Setter
     private SetbackPosition lastKnownGoodPosition;
 
+    // История позиций для отката назад на N тиков
+    private final LinkedList<SetbackPosition> positionHistory = new LinkedList<>();
+    private static final int MAX_HISTORY_SIZE = 100; // Максимальное количество позиций в истории
+
     // Флаги состояния
     @Getter @Setter
     private boolean isSendingSetback = false;
@@ -146,13 +150,15 @@ public class SetbackTeleportUtil {
             pendingTeleports.add(teleportData);
 
             // Телепортируем игрока
+            float yaw = requiredSetBack != null ? requiredSetBack.getYaw() : orePlayer.getYaw();
+            float pitch = requiredSetBack != null ? requiredSetBack.getPitch() : orePlayer.getPitch();
             Location teleportLocation = new Location(
                     bukkitPlayer.getWorld(),
                     teleportData.getPosition().getX(),
                     teleportData.getPosition().getY(),
                     teleportData.getPosition().getZ(),
-                    orePlayer.getYaw(),
-                    orePlayer.getPitch()
+                    yaw,
+                    pitch
             );
 
             // Выполняем телепорт асинхронно
@@ -170,10 +176,14 @@ public class SetbackTeleportUtil {
                 }
             }.runTask(OreGuard.getInstance());
 
-            // Обновляем последнюю известную позицию
+            // Обновляем последнюю известную позицию (yaw и pitch берутся из requiredSetBack если есть)
+            float yawPos = requiredSetBack != null ? requiredSetBack.getYaw() : orePlayer.getYaw();
+            float pitchPos = requiredSetBack != null ? requiredSetBack.getPitch() : orePlayer.getPitch();
             lastKnownGoodPosition = new SetbackPosition(
                     teleportData.getPosition(),
-                    teleportData.getVelocity()
+                    teleportData.getVelocity(),
+                    yawPos,
+                    pitchPos
             );
 
         } finally {
@@ -228,14 +238,77 @@ public class SetbackTeleportUtil {
      */
     public void updateLastKnownGoodPosition() {
         Location currentLocation = orePlayer.getLocation();
-        lastKnownGoodPosition = new SetbackPosition(
-                new Vector3d(
-                        currentLocation.getX(),
-                        currentLocation.getY(),
-                        currentLocation.getZ()
-                ),
-                orePlayer.getVelocity()
+        Vector3d position = new Vector3d(
+                currentLocation.getX(),
+                currentLocation.getY(),
+                currentLocation.getZ()
         );
+        Vector velocity = orePlayer.getVelocity().clone();
+        
+        lastKnownGoodPosition = new SetbackPosition(position, velocity, orePlayer.getYaw(), orePlayer.getPitch());
+        
+        // Добавляем в историю позиций
+        positionHistory.addLast(new SetbackPosition(position, velocity, orePlayer.getYaw(), orePlayer.getPitch()));
+        
+        // Ограничиваем размер истории
+        if (positionHistory.size() > MAX_HISTORY_SIZE) {
+            positionHistory.removeFirst();
+        }
+    }
+    
+    /**
+     * Выполнить откат на N тиков назад
+     * @param ticks Количество тиков для отката
+     * @return true если откат выполнен, false если нет доступной позиции
+     */
+    public boolean executeSetbackByTicks(int ticks) {
+        if (isExempt()) return false;
+        if (ticks <= 0) return false;
+        if (positionHistory.isEmpty()) {
+            // Если истории нет, используем последнюю известную позицию
+            if (lastKnownGoodPosition != null) {
+                return executeSetbackToPosition(lastKnownGoodPosition);
+            }
+            return false;
+        }
+        
+        // Находим позицию N тиков назад
+        int targetIndex = positionHistory.size() - ticks - 1;
+        if (targetIndex < 0) {
+            // Если требуемое количество тиков больше истории, используем самую старую позицию
+            targetIndex = 0;
+        }
+        
+        SetbackPosition targetPosition = positionHistory.get(targetIndex);
+        return executeSetbackToPosition(targetPosition);
+    }
+    
+    /**
+     * Выполнить откат на указанную позицию
+     */
+    private boolean executeSetbackToPosition(SetbackPosition position) {
+        if (isPendingSetback()) return true;
+        
+        // Создаем данные телепортации
+        TeleportData teleportData = new TeleportData(
+                position.getPosition(),
+                position.getVelocity(),
+                teleportIdCounter.incrementAndGet(),
+                System.currentTimeMillis()
+        );
+        
+        // Создаем данные сброса
+        requiredSetBack = new SetBackData(
+                teleportData,
+                position.getYaw(),
+                position.getPitch(),
+                false
+        );
+        
+        // Отправляем телепорт
+        sendSetbackTeleport(teleportData);
+        
+        return true;
     }
 
     /**
@@ -283,6 +356,7 @@ public class SetbackTeleportUtil {
      */
     public void reset() {
         pendingTeleports.clear();
+        positionHistory.clear();
         lastKnownGoodPosition = null;
         requiredSetBack = null;
         isSendingSetback = false;
@@ -349,10 +423,14 @@ public class SetbackTeleportUtil {
     public static class SetbackPosition {
         private final Vector3d position;
         private final Vector velocity;
+        private final float yaw;
+        private final float pitch;
 
-        public SetbackPosition(Vector3d position, Vector velocity) {
+        public SetbackPosition(Vector3d position, Vector velocity, float yaw, float pitch) {
             this.position = position;
             this.velocity = velocity;
+            this.yaw = yaw;
+            this.pitch = pitch;
         }
     }
 

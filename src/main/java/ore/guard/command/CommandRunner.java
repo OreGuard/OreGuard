@@ -115,7 +115,7 @@ public abstract class CommandRunner implements CommandExecutor, TabCompleter {
         return new ArrayList<>();
     }
 
-    protected void registerSubCommand(SubCommand subCommand) {
+    public void registerSubCommand(SubCommand subCommand) {
         subCommands.put(subCommand.getName().toLowerCase(), subCommand);
     }
 
